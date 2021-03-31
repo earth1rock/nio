@@ -41,17 +41,13 @@ public class ServerTemp implements Runnable {
                     if (key.isReadable()) this.read(key);
                 }
             }
-
-
         } catch (
                 IOException e) {
             e.printStackTrace();
         }
-
     }
 
     private void accept(SelectionKey key) throws IOException {
-        //возвращает СокетЧанел
         //accept блокирует до тех пор пока не будет получено соединение
         SocketChannel socketChannel = ((ServerSocketChannel) key.channel()).accept();
         String address = (new StringBuilder(socketChannel.socket().getInetAddress().toString()))
@@ -100,6 +96,4 @@ public class ServerTemp implements Runnable {
         ServerTemp server = new ServerTemp();
         new Thread(server).start();
     }
-
-
 }

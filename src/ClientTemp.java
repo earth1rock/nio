@@ -49,8 +49,5 @@ public class ClientTemp implements Runnable {
                 }
             }
         }
-
-
     }
-
 }
