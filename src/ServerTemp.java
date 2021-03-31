@@ -66,7 +66,10 @@ public class ServerTemp implements Runnable {
         SocketChannel socketChannel = (SocketChannel) key.channel();
         ByteBuffer byteBuffer = ByteBuffer.allocate(140);
         socketChannel.read(byteBuffer);
-        String result = key.attachment() + ": " + new String(byteBuffer.array()).trim() + "\n";
+        String result = (new StringBuilder().append(key.attachment())
+                .append(": ")
+                .append(new String(byteBuffer.array()).trim())
+                .append("\n")).toString();
         System.out.println(result);
         echo(result);
     }
