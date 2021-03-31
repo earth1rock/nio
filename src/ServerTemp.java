@@ -41,6 +41,8 @@ public class ServerTemp implements Runnable {
                     if (key.isReadable()) this.read(key);
                 }
             }
+
+
         } catch (
                 IOException e) {
             e.printStackTrace();
@@ -57,21 +59,30 @@ public class ServerTemp implements Runnable {
                 .append(socketChannel.socket().getPort()).toString();
         socketChannel.configureBlocking(false);
         socketChannel.register(selector, SelectionKey.OP_READ, address);
+        echo("Connected client: " + address + "\n");
         socketChannel.write(welcomeBuf);
         welcomeBuf.rewind();
         System.out.println("Connect client: " + address);
     }
 
     private void read(SelectionKey key) throws IOException {
+
         SocketChannel socketChannel = (SocketChannel) key.channel();
         ByteBuffer byteBuffer = ByteBuffer.allocate(140);
-        socketChannel.read(byteBuffer);
-        String result = (new StringBuilder().append(key.attachment())
-                .append(": ")
-                .append(new String(byteBuffer.array()).trim())
-                .append("\n")).toString();
-        System.out.println(result);
-        echo(result);
+        String result = key.attachment() +
+                ": " +
+                "disconnected";
+        try {
+            socketChannel.read(byteBuffer);
+            result = key.attachment() +
+                    ": " +
+                    new String(byteBuffer.array()).trim();
+            System.out.println(result);
+        } catch (Exception e) {
+            System.out.println(result);
+            socketChannel.close();
+        }
+        echo(result + "\n");
     }
 
     private void echo(String message) throws IOException {
