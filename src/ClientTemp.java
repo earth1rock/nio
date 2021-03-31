@@ -22,7 +22,8 @@ public class ClientTemp implements Runnable {
             try {
                 socketChannel.read(byteBuffer);
             } catch (IOException e) {
-                e.printStackTrace();
+                System.out.println(e.getMessage());
+                System.exit(0);
                 break;
             }
             String result = new String(byteBuffer.array()).trim();
@@ -37,16 +38,14 @@ public class ClientTemp implements Runnable {
 
         Scanner scanner = new Scanner(System.in);
         while (true) {
-            if (clientTemp.socketChannel.isConnected()) {
-                String message = scanner.nextLine();
-                try {
-                    ByteBuffer byteBuffer = ByteBuffer.wrap(message.getBytes());
-                    clientTemp.socketChannel.write(byteBuffer);
-                    byteBuffer.clear();
-                } catch (IOException exception) {
-                    System.out.println(exception.getMessage());
-                    break;
-                }
+            String message = scanner.nextLine();
+            try {
+                ByteBuffer byteBuffer = ByteBuffer.wrap(message.getBytes());
+                clientTemp.socketChannel.write(byteBuffer);
+                byteBuffer.clear();
+            } catch (IOException exception) {
+                System.out.println(exception.getMessage());
+                break;
             }
         }
     }
