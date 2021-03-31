@@ -7,53 +7,85 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 
-public class ServerTemp {
-    public static void main(String[] args) throws IOException {
+public class ServerTemp implements Runnable {
+    Selector selector;
+    ServerSocketChannel serverSocketChannel;
+    InetSocketAddress inetSocketAddress;
+    private final ByteBuffer welcomeBuf = ByteBuffer.wrap("Welcome to NioChat!\n".getBytes());
+    private final int port = 2222;
 
-        Selector selector = Selector.open();
-
-        ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
-
-        InetSocketAddress inetSocketAddress = new InetSocketAddress(2222);
-
+    ServerTemp() throws IOException {
+        selector = Selector.open();
+        serverSocketChannel = ServerSocketChannel.open();
+        inetSocketAddress = new InetSocketAddress(port);
         serverSocketChannel.bind(inetSocketAddress);
-
         serverSocketChannel.configureBlocking(false);
-
         serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
+    }
 
-        while (true) {
+    @Override
+    public void run() {
 
-            /*
-            When you call select() or selectNow() on the Selector
-            it gives you only the SelectableChannel instances that actually has data to read
-             */
-            selector.select();
+        try {
+            System.out.println("Server start | port: " + port);
 
-            Iterator<SelectionKey> selectionKeyIterator = selector.selectedKeys().iterator();
+            while (true) {
+                selector.select();
+                Iterator<SelectionKey> selectionKeyIterator = selector.selectedKeys().iterator();
+                SelectionKey key;
+                while (selectionKeyIterator.hasNext()) {
+                    key = selectionKeyIterator.next();
+                    selectionKeyIterator.remove();
 
-            while (selectionKeyIterator.hasNext()) {
-                SelectionKey key = selectionKeyIterator.next();
-                System.out.println("temp");
-                if (key.isAcceptable()) {
-                    System.out.println("Connect client");
-
-                    //возвращает СокетЧанел
-                    //accept блокирует до тех пор пока не будет получено соединение
-                    SocketChannel socketChannel = serverSocketChannel.accept();
-                    socketChannel.configureBlocking(false);
-
-                    socketChannel.register(selector, SelectionKey.OP_READ);
-                } else if (key.isReadable()) {
-                    SocketChannel socketChannel = (SocketChannel) key.channel();
-                    ByteBuffer byteBuffer = ByteBuffer.allocate(140);
-                    socketChannel.read(byteBuffer);
-                    String result = new String(byteBuffer.array()).trim();
-                    System.out.println(result);
+                    if (key.isAcceptable()) this.accept(key);
+                    if (key.isReadable()) this.read(key);
                 }
-                selectionKeyIterator.remove();
             }
+        } catch (
+                IOException e) {
+            e.printStackTrace();
+        }
 
+    }
+
+    private void accept(SelectionKey key) throws IOException {
+        //возвращает СокетЧанел
+        //accept блокирует до тех пор пока не будет получено соединение
+        SocketChannel socketChannel = ((ServerSocketChannel) key.channel()).accept();
+        String address = (new StringBuilder(socketChannel.socket().getInetAddress().toString()))
+                .append(":")
+                .append(socketChannel.socket().getPort()).toString();
+        socketChannel.configureBlocking(false);
+        socketChannel.register(selector, SelectionKey.OP_READ, address);
+        socketChannel.write(welcomeBuf);
+        welcomeBuf.rewind();
+        System.out.println("Connect client: " + address);
+    }
+
+    private void read(SelectionKey key) throws IOException {
+        SocketChannel socketChannel = (SocketChannel) key.channel();
+        ByteBuffer byteBuffer = ByteBuffer.allocate(140);
+        socketChannel.read(byteBuffer);
+        String result = key.attachment() + ": " + new String(byteBuffer.array()).trim() + "\n";
+        System.out.println(result);
+        echo(result);
+    }
+
+    private void echo(String message) throws IOException {
+        ByteBuffer byteBuffer = ByteBuffer.wrap(message.getBytes());
+        for (SelectionKey key : selector.keys()) {
+            if (key.isValid() && key.channel() instanceof SocketChannel) {
+                SocketChannel sch = (SocketChannel) key.channel();
+                sch.write(byteBuffer);
+                byteBuffer.rewind();
+            }
         }
     }
+
+    public static void main(String[] args) throws IOException {
+        ServerTemp server = new ServerTemp();
+        new Thread(server).start();
+    }
+
+
 }
